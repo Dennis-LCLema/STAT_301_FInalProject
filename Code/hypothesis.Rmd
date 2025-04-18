@@ -32,7 +32,7 @@ model <- aov(G3 ~ studytime, data = student.por)
 summary(model)
 
 ```
-
+#did not work
 ```{r}
 library(flextable)
 library(broom)
@@ -84,7 +84,7 @@ leveneTest(G3 ~ studytime, data = student.por)
 TukeyHSD(model)
 
 ```
-
+#did not work
 ```{r}
 
 # Get TukeyHSD output and convert to dataframe
