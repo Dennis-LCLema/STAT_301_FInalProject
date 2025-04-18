@@ -8,11 +8,14 @@ output: html_document
 ```{r setup, include=FALSE}
 knitr::opts_chunk$set(echo = TRUE)
 library(tidyverse)
+library(flextable)
 ```
 
 
 ```{r}
 str(student.por)
+student.por <- student.por %>% filter(!is.na(studytime), !is.na(G3))
+
 ```
 
 
@@ -31,6 +34,44 @@ summary(model)
 ```
 
 ```{r}
+library(flextable)
+library(broom)
+
+# Tidy ANOVA output
+tidy_aov <- broom::tidy(model)
+
+# Create flextable
+anova_flextable <- tidy_aov %>%
+  rename(
+    Source = term,
+    `Sum of Squares` = sumsq,
+    `Degrees of Freedom` = df,
+    `Mean Square` = meansq,
+    `F Value` = statistic,
+    `P-value` = p.value
+  ) %>%
+  flextable() %>%
+  set_header_labels(
+    Source = "Source",
+    `Degrees of Freedom` = "Df",
+    `Sum of Squares` = "Sum Sq",
+    `Mean Square` = "Mean Sq",
+    `F Value` = "F value",
+    `P-value` = "Pr(>F)"
+  ) %>%
+  autofit() %>%
+  colformat_num(j = c("Sum of Squares", "Mean Square", "F Value", "P-value"), digits = 3) %>%
+  italic(i = 1, j = "Source") %>%
+  bold(i = 1, bold = TRUE) %>%
+  add_footer_lines("Signif. codes:  0 ‘***’ 0.001 ‘**’ 0.01 ‘*’ 0.05")
+
+# Print the table
+anova_flextable
+
+```
+
+
+```{r}
 qqnorm(residuals(model)); qqline(residuals(model))
 
 library(car)
@@ -41,6 +82,37 @@ leveneTest(G3 ~ studytime, data = student.por)
 
 ```{r}
 TukeyHSD(model)
+
+```
+
+```{r}
+
+# Get TukeyHSD output and convert to dataframe
+tukey_df <- TukeyHSD(model)$studytime %>%
+  as.data.frame() %>%
+  tibble::rownames_to_column("Comparison") %>%
+  rename(
+    `Mean Diff` = diff,
+    `Lower CI` = lwr,
+    `Upper CI` = upr,
+    `Adjusted p-value` = `p adj`
+  )
+
+# Create the flextable
+tukey_flextable <- flextable(tukey_df) %>%
+  colformat_num(j = c("Mean Diff", "Lower CI", "Upper CI", "Adjusted p-value"), digits = 3) %>%
+  set_header_labels(
+    Comparison = "Group Comparison",
+    `Mean Diff` = "Mean Diff",
+    `Lower CI` = "Lower CI",
+    `Upper CI` = "Upper CI",
+    `Adjusted p-value` = "p adj"
+  ) %>%
+  autofit() %>%
+  add_footer_lines("Pairwise Tukey-adjusted comparisons at 95% confidence level")
+
+# Print the table
+tukey_flextable
 
 ```
 
