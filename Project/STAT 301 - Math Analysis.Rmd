@@ -1,0 +1,80 @@
+---
+title: "STAT 301-01 - ANOVA Project"
+author: "James Simonson"
+date: "2025-04-01"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+library(tidyverse)
+library(xlsx)
+library(e1071)
+library(RWeka)
+library(C50)
+library(nlme)
+library(multcomp)
+filepath= "C:/Users/katie/OneDrive - MNSCU/Bachelors/2025/Spring 25/STAT 301-01 - ANOVA & Multivariate/Project/Data/"
+#data.csv <- read.table(paste0(filepath,"student-mat.csv"),sep=";",header=TRUE)
+data.xlsx <- read.xlsx(paste0(filepath,"Student_Math_Scores.xlsx"),sheetIndex = 1,stringsAsFactors=T)
+#write.xlsx(data,paste0(filepath,"Student_Math_Scores.xlsx"))
+```
+
+```{r C5.0 Data Assessment}
+# Data Cleaning
+data<-data.xlsx[,-c(32:38)]
+colnames(data)[32]<-"Pass"
+
+set.seed(400)
+# Create train & test datasets 
+index <- sample(1:nrow(data), 2/3*nrow(data))
+data.train <- data[index,]
+data.test <-  data[-index,]
+
+# C5.0 Model Creation & Summary
+data.C50 <- C5.0(Pass ~ ., data = data.train,control=C5.0Control(minCases=23))
+
+summary(data.C50)
+plot(data.C50,main = "A decision tree with 2 nonterminal nodes.")
+
+# Model Evaluation
+data.Pred<- predict(data.C50,data.test, type = "class")
+data.Conf<- table(data.test$Pass,data.Pred,dnn = c("actual","predicted"))
+data.Conf
+confusionP(data.Conf)
+```
+
+
+```{r ANOVA of Mjob & Failures}
+# Data Cleaning
+data<-data.xlsx[,c(1,10,16,32:37,39)]
+data$failures<- as.factor(data$failures)
+colnames(data)[1]<-"ID"
+colnames(data)[3]<-"Fail"
+
+data<-data%>%pivot_longer(cols = c(4:6),names_to = "Measure",values_to = "Score")
+data<-data[,-c(4:7)]
+data
+
+#write.xlsx(data,paste0(filepath,"Student_Math_Scores_Long",".xlsx"))
+
+
+# ANOVA Model Creation
+
+model<-lme(Score~Mjob+Fail, random=~1+Measure|ID, data=data   )
+
+anova(model)
+
+```
+```{r Mjob Posthoc}
+posthoc_Mjob<-glht(model, linfct = mcp (Mjob ="Tukey"))
+Mjob_sum<-summary(posthoc_Mjob)
+Mjob_sum
+```
+
+```{r Failures Posthoc}
+posthoc_Fail<-glht(model, linfct = mcp (Fail ="Tukey"))
+Fail_sum<-summary(posthoc_Fail)
+Fail_sum
+```
+
