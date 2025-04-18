@@ -1,0 +1,71 @@
+---
+title: "Project"
+author: "Dennis Campoverde-Lema"
+date: "2025-03-28"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+library(tidyverse)
+```
+
+
+```{r}
+str(student.por)
+```
+
+
+```{r}
+# Convert studytime to a factor
+student.por$studytime <- as.factor(student.por$studytime)
+
+student.por$G3 <- as.numeric(student.por$G3)
+
+# One-Way ANOVA: does study time affect final grade?
+model <- aov(G3 ~ studytime, data = student.por)
+
+# ANOVA summary
+summary(model)
+
+```
+
+```{r}
+qqnorm(residuals(model)); qqline(residuals(model))
+
+library(car)
+leveneTest(G3 ~ studytime, data = student.por)
+
+```
+
+
+```{r}
+TukeyHSD(model)
+
+```
+
+
+```{r}
+summary_data <- student.por %>%
+  group_by(studytime) %>%
+  summarise(
+    mean_G3 = mean(G3),
+    sd_G3 = sd(G3),
+    n = n(),
+    se = sd_G3 / sqrt(n),
+    t_value = qt(0.975, df = n - 1),
+    ci = t_value * se
+  )
+
+ggplot(summary_data, aes(x = studytime, y = mean_G3)) +
+  geom_point(size = 3, shape = 16, color = "black") +  # mean point
+  geom_errorbar(aes(ymin = mean_G3 - ci, ymax = mean_G3 + ci), width = 0.2) +
+  labs(
+    title = "Mean Final Grade by Study Time (with 95% CI)",
+    x = "Weekly Study Time Category",
+    y = "Mean Final Grade (G3)"
+  ) +
+  theme_minimal()
+
+```
+
