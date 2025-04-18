@@ -39,9 +39,14 @@ plot(data.C50,main = "A decision tree with 2 nonterminal nodes.")
 
 # Model Evaluation
 data.Pred<- predict(data.C50,data.test, type = "class")
-data.Conf<- table(data.test$Pass,data.Pred,dnn = c("actual","predicted"))
-data.Conf
-confusionP(data.Conf)
+
+# Conf. Matrix
+conf_matrix <- table(Predicted = data.Pred, Actual = data.test$Pass)
+print(conf_matrix)
+
+# Assess Model Accuracy
+accuracy <- sum(data.Pred == data.test$Pass) / length(data.test$Pass)
+cat("Accuracy:", round(accuracy * 100, 2), "%\n")
 ```
 
 
