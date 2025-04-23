@@ -39,49 +39,42 @@ plot(data.C50,main = "A decision tree with 2 nonterminal nodes.")
 
 # Model Evaluation
 data.Pred<- predict(data.C50,data.test, type = "class")
-
-# Conf. Matrix
-conf_matrix <- table(Predicted = data.Pred, Actual = data.test$Pass)
-print(conf_matrix)
-
-# Assess Model Accuracy
-accuracy <- sum(data.Pred == data.test$Pass) / length(data.test$Pass)
-cat("Accuracy:", round(accuracy * 100, 2), "%\n")
+data.Conf<- table(data.test$Pass,data.Pred,dnn = c("actual","predicted"))
+data.Conf
+confusionP(data.Conf)
 ```
 
 
 ```{r ANOVA of Mjob & Failures}
 # Data Cleaning
-data<-data.xlsx[,c(1,10,16,34)]
-
-data<-data%>%
-  filter(G3!=0)%>%
-  mutate(Fail= case_when(
-        failures == 0 ~ 0,
-        failures > 0 ~ 1)) 
-data$Fail<- as.factor(data$Fail)
-data<-data[,-3]
+data<-data.xlsx[,c(1,10,16,32:37,39)]
+data$failures<- as.factor(data$failures)
 colnames(data)[1]<-"ID"
+colnames(data)[3]<-"Fail"
+
+data<-data%>%pivot_longer(cols = c(4:6),names_to = "Measure",values_to = "Score")
+data<-data[,-c(4:7)]
+data
 
 #write.xlsx(data,paste0(filepath,"Student_Math_Scores_Long",".xlsx"))
 
 
 # ANOVA Model Creation
 
-model<-lme(G3~Mjob+Fail+Mjob*Fail, random=~1|ID, data=data   )
+model<-lme(Score~Mjob+Fail, random=~1+Measure|ID, data=data   )
 
 anova(model)
 
 ```
-
-
 ```{r Mjob Posthoc}
 posthoc_Mjob<-glht(model, linfct = mcp (Mjob ="Tukey"))
 Mjob_sum<-summary(posthoc_Mjob)
-posthoc_df <- as.data.frame(Mjob_sum$test[c("coefficients", "sigma", "tstat", "pvalues")])
-posthoc_df$comparison <- rownames(posthoc_df)
-ordered_posthoc <- posthoc_df[order(posthoc_df$pvalues), ]
-print(ordered_posthoc)
+Mjob_sum
 ```
 
+```{r Failures Posthoc}
+posthoc_Fail<-glht(model, linfct = mcp (Fail ="Tukey"))
+Fail_sum<-summary(posthoc_Fail)
+Fail_sum
+```
 
